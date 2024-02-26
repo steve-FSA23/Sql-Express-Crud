@@ -13,6 +13,14 @@ const client = new pg.Client(
 //Create Route
 app.post("/api/notes", async (req, res, next) => {
     try {
+        // Define the SQL query with interpolation
+        const SQL = `INSERT INTO notes(txt)VALUES($1)RETURNING *`;
+
+        // Execute the SQL query with the value from req.body.txt
+        const response = await client.query(SQL, [req.body.txt]);
+
+        // Send the inserted record as the response
+        res.send(response.rows[0]);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
@@ -37,6 +45,20 @@ app.get("/api/notes", async (req, res, next) => {
 // Update Route
 app.put("/api/notes/:id", async (req, res, next) => {
     try {
+        const SQL = `
+        UPDATE notes
+        SET txt=$1, ranking=$2, updated_at=now()
+        WHERE id=$3
+        RETURNING *;
+        `;
+        // Execute the SQL query with values from req.body and req.params
+        const response = await client.query(SQL, [
+            req.body.txt,
+            req.body.ranking,
+            req.params.id,
+        ]);
+        // Sending the updated record as the response
+        res.send(response.rows[0]);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
@@ -46,6 +68,15 @@ app.put("/api/notes/:id", async (req, res, next) => {
 // Delete Route
 app.delete("/api/notes/:id", async (req, res, next) => {
     try {
+        const SQL = `
+        DELETE FROM notes
+        WHERE id=$1;
+        `;
+        // Execute the SQL query with value from req.params
+        await client.query(SQL, [req.params.id]);
+
+        // Send a success status code indicating that the item was deleted
+        res.sendStatus(204);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
